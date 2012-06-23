@@ -17,7 +17,7 @@ use LWP::UserAgent;
 use Encode;
 use Encode::Detect::Detector;
 
-my $DEBUG = 0;
+my $DEBUG = 1;
 
 ## Parse options and print usage if there is a syntax error,
 ## or if usage was explicitly requested.
@@ -101,10 +101,12 @@ sub createBookmarkAtomEntry {
 	# in title and description
 	my $encoding_name = Encode::Detect::Detector::detect($title);
 	if(defined($encoding_name)) {
+		$encoding_name = (uc($encoding_name) eq "EUC-JP") ? "UTF-8" : $encoding_name;
 		$title = encode($encoding_name, $title);
 	}
 	$encoding_name = Encode::Detect::Detector::detect($t);
 	if(defined($encoding_name)) {
+		$encoding_name = (uc($encoding_name) eq "EUC-JP") ? "UTF-8" : $encoding_name;
 		$t = encode($encoding_name, $t);
 	}
 
@@ -156,7 +158,6 @@ sub genTags {
 	foreach my $dtags ($d->tags()) {
 		my @dtags = split(/\s/, $dtags);
 		foreach my $tag (@dtags) {
-			print "tag: $tag|\n" if($DEBUG);
 			next if( $tag =~ /(from|twitter|ibm)/i);
 			push(@tags, $taggen->category( { term => $tag } ) );
 		}
