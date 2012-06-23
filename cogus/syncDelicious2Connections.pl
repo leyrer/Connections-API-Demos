@@ -188,3 +188,90 @@ sub updateConnections {
 	}
 }
 
+
+__END__
+
+=head1 NAME
+
+syncDelicious2Connections - Copy recent Delicious bookmarks with a given tag to a given IBM Connections implementation
+
+=head1 SYNOPSIS
+
+syncDelicious2Connections.pl [-help|man] -user connections_username -password connections_password 
+-server connections_server -delusr delicious_username -delpwd delicious_password
+
+=head1 OPTIONS
+
+=over 8
+
+=item B<-help>
+
+Print a brief help message and exits.
+
+=item B<-man>
+
+Prints the manual page and exits.
+
+=item B<-user>
+
+The name of the IBM Connections user.
+
+=item B<-password>
+
+The IBM Connections password for the user.
+
+=item B<-server>
+
+The servername (DNS hostname) of the IBM Connections installation.
+
+=item B<-delusr>
+
+The name of the Delicious.com user.
+
+=item B<-delpwd>
+
+The password of the Delicious.com user.
+
+=back
+
+=head1 DESCRIPTION
+
+B<synDelicious2Connections> will copy all recent Delicious bookmarks with a given tag to an IBM Connections installation.
+
+=head1 EXAMPLE
+
+perl ./syncDelicious2Connections.pl -user 'Connections Demo User' -password '1234' -server connections.example.com -delusr 'Delicious Demo User' -delpwd '1234'
+
+=head1 NOTABLE INFO
+
+=over 8
+
+=item B<URL generation>
+
+If you are using e.g. http://bookmarks.example.com/ instead of http://www.example.com/dogear as URLs,
+you have to ajust the URLs in the code.
+
+=item B<Add vs. Update>
+
+If you try to add an existing bookmark, the existing entry will get upated and no new bookmark will get added.
+
+=item B<Server SSL certificates>
+
+If the code can't connect to the server, it is probably due to the fact, that you are using self-signed certificates for SSL/TLS in your Connections installations. Just download the certificate to the directory the script is residing and name it "server.pem" (or adapt the code ;). SuperUser has a more detailed description on how to download the certificate: http://superuser.com/questions/97201/how-to-save-a-remote-server-ssl-certificate-locally-as-a-file
+
+=back
+
+=head1 Versions
+
+This code has been tested with Connection 3.0.1 and perl 5, version 12, subversion 4 (v5.12.4) built for i686-linux-gnu-thread-multi-64int.
+
+=head1 Licence
+
+Code made available under the Apache 2.0 license. http://www.apache.org/licenses/example-NOTICE.txt
+
+=head1 Authors
+
+Martin Leyrer <leyrer+SyncDelicious2Connections@gmail.com>
+
+=cut
+
