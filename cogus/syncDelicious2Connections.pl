@@ -17,7 +17,7 @@ use LWP::UserAgent;
 use Encode;
 use Encode::Detect::Detector;
 
-my $DEBUG = 1;
+my $DEBUG = 0;
 
 ## Parse options and print usage if there is a syntax error,
 ## or if usage was explicitly requested.
@@ -30,15 +30,12 @@ pod2usage(1) if $opt_help;
 pod2usage(-verbose => 2) if $opt_man;
 
 # Connect to delicious
-if ( $opt_delusr eq '' ) {
-	pod2usage( -verbose => 2, -message => "$0: Please state the Delicious username!\n");
-}
-if ( $opt_delpwd eq '' ) {
-	pod2usage( -verbose => 2, -message => "$0: Please state the Delicious password!\n");
-}
-if ( $opt_delicioustag eq '' ) {
-	pod2usage( -verbose => 2, -message => "$0: Please state the Delicious tag to search for!\n");
-}
+pod2usage( -verbose => 2, -message => "$0: Please state the Delicious username!\n")
+	if ( $opt_delusr eq '' );
+pod2usage( -verbose => 2, -message => "$0: Please state the Delicious password!\n")
+	if ( $opt_delpwd eq '' );
+pod2usage( -verbose => 2, -message => "$0: Please state the Delicious tag to search for!\n")
+	if ( $opt_delicioustag eq '' );
 my $del = Net::Delicious->new({	user => $opt_delusr,
 								pswd => $opt_delpwd,
 								debug => 0,
@@ -69,15 +66,12 @@ exit;
 sub connections_connect {
 	my ($user, $pwd, $srv, $ua) = @_;
 	
-	if ( $opt_username eq '' ) {
-		pod2usage( -verbose => 2, -message => "$0: Please state the IBM Connections username!\n");
-	}
-	if ( $opt_password eq '' ) {
-		pod2usage( -verbose => 2, -message => "$0: Please state the IBM Connections password!\n");
-	}
-	if ( $opt_server eq '' ) { 
-		pod2usage( -verbose => 2, -message => "$0: Please state the IBM Connections servername!\n" );
-	}
+	pod2usage( -verbose => 2, -message => "$0: Please state the IBM Connections username!\n")
+		if ( $opt_username eq '' );
+	pod2usage( -verbose => 2, -message => "$0: Please state the IBM Connections password!\n")
+		if ( $opt_password eq '' );
+	pod2usage( -verbose => 2, -message => "$0: Please state the IBM Connections servername!\n" )
+		if ( $opt_server eq '' );
 
 	# To prevent credentials from being sent in the clear, the API (except for the Files and Wikis API)
 	# always sends a redirect to HTTPS before issuing the unauthorized challenge.
