@@ -1,8 +1,8 @@
-DESCRIPTION
-    file2Connections will send the given file to the personal "Files"
-    applications store of the given IBM Connections installation.
+NAME
+    file2Connections - Upload a local to to the IBM Connections Files
+    application
 
-DESCRIPTION
-    file2ConnCommunity will send the given file to the given Community
-    inside the given IBM Connections installation.
+NAME
+    file2ConnCommunity - Upload a local file into the file store of an IBM
+    Connections Community
 
