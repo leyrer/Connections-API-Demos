@@ -4,6 +4,8 @@
 
 use strict;
 use warnings;
+use Getopt::Long;
+use Pod::Usage;
 use File::stat;
 use Net::Delicious;
 use Log::Dispatch::Screen;
@@ -17,16 +19,25 @@ use Encode::Detect::Detector;
 
 my $DEBUG = 0;
 
-die "Please enter your delicious user as the 1st parameter of the programm!\n"
-	if( not defined($ARGV[1]) or $ARGV[1] eq '');
-die "Please enter your delicious password as the 2nd parameter of the programm!\n"
-	if( not defined($ARGV[1]) or $ARGV[1] eq '');
-
+## Parse options and print usage if there is a syntax error,
+## or if usage was explicitly requested.
+our $opt_server = ''; our $opt_username = ''; our $opt_password = '';
+our $opt_delusr = ''; our $opt_help = ''; our $opt_man= ''; our $opt_delpwd = '';
+GetOptions( "server=s", "username=s", "password=s", "file=s", "delusr=s", "delpwd=s", "help", "man",
+			) or pod2usage(2);
+pod2usage(1) if $opt_help;
+pod2usage(-verbose => 2) if $opt_man;
 
 # Connect to delicious
-my $del = Net::Delicious->new({	user => $ARGV[0] ,
-								pswd => $ARGV[1] ,
-								debug => $DEBUG,
+if ( $opt_delusr eq '' ) {
+	pod2usage( -verbose => 2, -message => "$0: Please state the Delicious username!\n");
+}
+if ( $opt_delpwd eq '' ) {
+	pod2usage( -verbose => 2, -message => "$0: Please state the Delicious password!\n");
+}
+my $del = Net::Delicious->new({	user => $opt_delusr,
+								pswd => $opt_delpwd,
+								debug => 0,
 							  });
 die "Connection problem with delicious\n"
 	if(not defined($del));
@@ -35,13 +46,13 @@ die "Connection problem with delicious\n"
 # Create a user object
 my $ua = LWP::UserAgent->new;
 $ua->agent("SyncDel2Conn/0.1");
-my $conn = &connections_connect( $ARGV[2], $ARGV[3], $ARGV[4], $ua);
+my $conn = &connections_connect( $opt_username, $opt_password, $opt_server, $ua);
 die "Connection problem with Connections\n"
 	if(not defined($conn));
 
 # Find my recent delicious links with tag "ibm"
 my $it = $del->recent_posts( {tag => 'ibm'} );
-print "Found " . $it->count() . " links on delicious with the tag 'ibm'.\n";
+print "Found " . $it->count() . " links on delicious with the tag 'ibm'.\n" if($DEBUG);
 while (my $d = $it->next()) {
 	my $xml = createBookmarkAtomEntry($d, $ARGV[2]);
 	updateConnections($xml, $ua, $conn);
@@ -54,12 +65,15 @@ exit;
 sub connections_connect {
 	my ($user, $pwd, $srv, $ua) = @_;
 	
-	die "Please state the IBM Connections username!"
-		if ( $user eq '' );
-	die "Please state the IBM Connections password!"
-		if ( $pwd eq '' );
-	die "Please state the IBM Connections servername!"
-		if ( $srv eq '' );
+	if ( $opt_username eq '' ) {
+		pod2usage( -verbose => 2, -message => "$0: Please state the IBM Connections username!\n");
+	}
+	if ( $opt_password eq '' ) {
+		pod2usage( -verbose => 2, -message => "$0: Please state the IBM Connections password!\n");
+	}
+	if ( $opt_server eq '' ) { 
+		pod2usage( -verbose => 2, -message => "$0: Please state the IBM Connections servername!\n" );
+	}
 
 	# To prevent credentials from being sent in the clear, the API (except for the Files and Wikis API)
 	# always sends a redirect to HTTPS before issuing the unauthorized challenge.
