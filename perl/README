@@ -1,5 +1,8 @@
 NAME
-    file2Connections - Upload a local to to the IBM Connections Files
+    set_bookmark - Add a Bookmark to an IBM Connections installation
+
+NAME
+    file2Connections - Upload a local file to to the IBM Connections Files
     application
 
 NAME
