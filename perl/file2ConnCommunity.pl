@@ -111,7 +111,6 @@ sub createUploadContent {
 	my $filename = $1;
 
 	my $content = {
-		_label		=> "XXX",
 		label		=> $filename,
 		description	=> 'Always add a nice description.',	# optional
 		file 		=> [ $file ],
@@ -301,4 +300,5 @@ Code made available under the Apache 2.0 license. http://www.apache.org/licenses
 Martin Leyrer <leyrer+file2ConnCommunity@gmail.com>
 
 =cut
+
 
