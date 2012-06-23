@@ -24,10 +24,6 @@ pod2usage(-verbose => 2) if $opt_man;
 # http://www.lotus.com/ldd/lcwiki.nsf/dx/Authenticating_requests_ic301
 my $port = "443";
 
-# LWP::UserAgent wants to verify the certificates and
-# needs to know where the Certificate Authority root certificate is
-$ENV{HTTPS_CA_FILE} = './server.pem';
-
 my $user   = $opt_username;
 my $pw     = $opt_password;
 my $server = $opt_server;
@@ -42,6 +38,9 @@ die "Please state the IBM Connections servername as the third paramter!"
 # Create a user object
 my $ua = LWP::UserAgent->new;
 $ua->agent("MyBookmark/0.1");
+
+# Make sure, that LWP recognizes the server certificate
+$ua->ssl_opts( SSL_ca_file => './server.pem' );
 
 # the default realm for Connections is 'lotus-connections'
 $ua->credentials( $server . ':' . $port, 'lotus-connections', $user, $pw );
