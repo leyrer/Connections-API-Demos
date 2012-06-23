@@ -121,7 +121,7 @@ sub createBookmarkAtomEntry {
 	my $content = sprintf(
 	    $gen->xml(
 	        $gen->entry(
-	            $gen->author($user),
+	            $gen->author($opt_username),
 	            $gen->title($title),
 	            $gen->content(
 	                { type => 'html' },
