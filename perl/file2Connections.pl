@@ -121,7 +121,6 @@ sub createUploadContent {
 # 		Adding multiple tags via a Array reference is not working, as all array references are apparently interpreted as file uploads
 # 		http://search.cpan.org/~gaas/HTTP-Message-6.03/lib/HTTP/Request/Common.pm
 # 		tag			=> ['perl_demo', 'automated_update'],	
-
 	};
 	return $content;
 }
@@ -133,7 +132,7 @@ sub parseResponse {
 	my %response;
 
 	# No, at this time I do not want to get HTML::Parser in to properly parse the HTML.
-	# Give me a break
+	# Give me a break!
 	$x =~ /\<meta name=\"(status)\" content=\"(\d+)\"/sm;
 	$response{'status'} = (not defined $2) ? '' : $2;
 	$x =~ s/^(.*?)\<body (.*?)\>//sm;
@@ -176,7 +175,7 @@ __END__
 
 =head1 NAME
 
-file2Connections - Upload a local to to the IBM Connections Files application
+file2Connections - Upload a local file to to the IBM Connections Files application
 
 =head1 SYNOPSIS
 
@@ -243,7 +242,15 @@ http://www.lotus.com/ldd/lcwiki.nsf/dx/Getting_a_cryptographic_key_ic301
 You can not update a file entry by uploading it several time, like it is possible with bookmarks.
 If you add a file (POST), the label is not allowed exist before.
 
+=item B<Server SSL certificates>
+
+If the code can't connect to the server, it is probably due to the fact, that you are using self-signed certificates for SSL/TLS in your Connections installations. Just download the certificate to the directory the script is residing and name it "server.pem" (or adapt the code ;). SuperUser has a more detailed description on how to download the certificate: http://superuser.com/questions/97201/how-to-save-a-remote-server-ssl-certificate-locally-as-a-file
+
 =back
+
+=head1 Versions
+
+This code has been tested with Connection 3.0.1 and perl 5, version 12, subversion 4 (v5.12.4) built for i686-linux-gnu-thread-multi-64int.
 
 =head1 Licence
 
