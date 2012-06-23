@@ -32,7 +32,8 @@ my $connectionsUA = connect2Connection($opt_username, $opt_password, $opt_server
 
 # The URL can change, for example to https://files.example.com/basic/api...
 # TODO Make URL generation more robust
-my $filesurl = 'https://' . $opt_server . '/files/basic/api/myuserlibrary/feed';
+# my $filesurl = 'https://' . $opt_server . '/files/basic/api/myuserlibrary/feed';
+my $filesurl = 'https://' . $opt_server . '/files/basic/api/communitylibrary/c5d5632e-6b1f-452d-8466-ca0056315ab0/feed';
 
 # Create Data for Connections upload
 my $c = createUploadContent($opt_file);
@@ -45,6 +46,8 @@ my $res = $connectionsUA->request($r);
 
 # Check the outcome of the response
 if ( $res->is_success ) {
+	print $filesurl . "\n\n";
+	print $res->decoded_content . "\n\n";
 	my $resp = parseResponse($res->decoded_content);
 	if( $resp->{'status'} eq '' or $resp->{'status'} eq '200' ) {	
 		# yes, if there is no statuscode in  the metadata of the response html file, all went well
@@ -112,10 +115,12 @@ sub createUploadContent {
 	my $filename = $1;
 	my $title = $filename;
 	my $content = {
-		label	=> $title,		# Give the upload a nice name here
-		title	=> $filename,
-		# description	=> 'Some description text',
-		visibility => 'private',# Let's keep it private for now
+		_label	=> $title,		# Give the upload a nice name here
+		label	=> $filename,
+		uploadFileTaggerTypeAhead	=> 'test',
+		propagate	=> 'true',
+		notification => 'on',
+		visibility => 'public',
 		file 	=> [ $file ],
 	};
 	return $content;
