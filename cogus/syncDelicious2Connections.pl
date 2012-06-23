@@ -17,13 +17,14 @@ use LWP::UserAgent;
 use Encode;
 use Encode::Detect::Detector;
 
-my $DEBUG = 0;
+my $DEBUG = 1;
 
 ## Parse options and print usage if there is a syntax error,
 ## or if usage was explicitly requested.
 our $opt_server = ''; our $opt_username = ''; our $opt_password = '';
 our $opt_delusr = ''; our $opt_help = ''; our $opt_man= ''; our $opt_delpwd = '';
-GetOptions( "server=s", "username=s", "password=s", "file=s", "delusr=s", "delpwd=s", "help", "man",
+our $opt_delicioustag = '';
+GetOptions( "server=s", "username=s", "password=s", "file=s", "delusr=s", "delpwd=s", "delicioustag=s", "help", "man",
 			) or pod2usage(2);
 pod2usage(1) if $opt_help;
 pod2usage(-verbose => 2) if $opt_man;
@@ -34,6 +35,9 @@ if ( $opt_delusr eq '' ) {
 }
 if ( $opt_delpwd eq '' ) {
 	pod2usage( -verbose => 2, -message => "$0: Please state the Delicious password!\n");
+}
+if ( $opt_delicioustag eq '' ) {
+	pod2usage( -verbose => 2, -message => "$0: Please state the Delicious tag to search for!\n");
 }
 my $del = Net::Delicious->new({	user => $opt_delusr,
 								pswd => $opt_delpwd,
@@ -51,8 +55,8 @@ die "Connection problem with Connections\n"
 	if(not defined($conn));
 
 # Find my recent delicious links with tag "ibm"
-my $it = $del->recent_posts( {tag => 'ibm'} );
-print "Found " . $it->count() . " links on delicious with the tag 'ibm'.\n" if($DEBUG);
+my $it = $del->recent_posts( {tag => $opt_delicioustag} );
+print "Found " . $it->count() . " links on delicious with the tag '$opt_delicioustag'.\n" if($DEBUG);
 while (my $d = $it->next()) {
 	my $xml = createBookmarkAtomEntry($d, $ARGV[2]);
 	updateConnections($xml, $ua, $conn);
@@ -199,7 +203,7 @@ syncDelicious2Connections - Copy recent Delicious bookmarks with a given tag to 
 =head1 SYNOPSIS
 
 syncDelicious2Connections.pl [-help|man] -user connections_username -password connections_password 
--server connections_server -delusr delicious_username -delpwd delicious_password
+-server connections_server -delusr delicious_username -delpwd delicious_password -delicioustag delicious_tag_to_search_for
 
 =head1 OPTIONS
 
@@ -233,6 +237,10 @@ The name of the Delicious.com user.
 
 The password of the Delicious.com user.
 
+=item B<-delicioustag>
+
+The tag, the script should search for on delicious.com
+
 =back
 
 =head1 DESCRIPTION
@@ -241,7 +249,7 @@ B<synDelicious2Connections> will copy all recent Delicious bookmarks with a give
 
 =head1 EXAMPLE
 
-perl ./syncDelicious2Connections.pl -user 'Connections Demo User' -password '1234' -server connections.example.com -delusr 'Delicious Demo User' -delpwd '1234'
+perl ./syncDelicious2Connections.pl -user 'Connections Demo User' -password '1234' -server connections.example.com -delusr 'Delicious Demo User' -delpwd '1234' -deliciousta example
 
 =head1 NOTABLE INFO
 
