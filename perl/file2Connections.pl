@@ -112,11 +112,16 @@ sub createUploadContent {
 	my $filename = $1;
 	my $title = $filename;
 	my $content = {
-		label	=> $title,		# Give the upload a nice name here
+		label	=> $title,									# Give the upload a nice name here
 		title	=> $filename,
-		# description	=> 'Some description text',
-		visibility => 'private',# Let's keep it private for now
-		file 	=> [ $file ],
+		visibility => 'private',							# Optional, but let's keep it private for now
+		description	=> 'Always add a nice description.',	# optional
+		file 		=> [ $file ],
+		tag			=> 'automated_update',					# Currently, only one tag can be set with perl
+# 		Adding multiple tags via a Array reference is not working, as all array references are apparently interpreted as file uploads
+# 		http://search.cpan.org/~gaas/HTTP-Message-6.03/lib/HTTP/Request/Common.pm
+# 		tag			=> ['perl_demo', 'automated_update'],	
+
 	};
 	return $content;
 }
