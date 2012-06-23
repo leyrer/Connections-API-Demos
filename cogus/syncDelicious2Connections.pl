@@ -178,12 +178,7 @@ sub updateConnections {
     	print "\tBookmark posted.\n" if($DEBUG);
 	} else {
     	print "\tError: " . $res->status_line, "\n";
-		print "XML:\n$xml\n";
-		print "-"x80 . "\n";
 		print $res->decoded_content;
-		open (ERROR, ">error.xml") or die "$!\n";
-		print ERROR $xml;
-		close(ERROR);
 	}
 }
 
