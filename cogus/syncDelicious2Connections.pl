@@ -17,7 +17,7 @@ use LWP::UserAgent;
 use Encode;
 use Encode::Detect::Detector;
 
-my $DEBUG = 1;
+my $DEBUG = 0;
 
 ## Parse options and print usage if there is a syntax error,
 ## or if usage was explicitly requested.
@@ -58,7 +58,7 @@ while (my $d = $it->next()) {
 	updateConnections($xml, $ua, $conn);
 }
 
-print "DONE!\n";
+print "DONE!\n" if($DEBUG);
 
 exit;
 
@@ -177,7 +177,7 @@ sub updateConnections {
 
 	# Check the outcome of the response
 	if ( $res->is_success ) {
-    	print "\tBookmark posted.\n";
+    	print "\tBookmark posted.\n" if($DEBUG);
 	} else {
     	print "\tError: " . $res->status_line, "\n";
 		print "XML:\n$xml\n";
