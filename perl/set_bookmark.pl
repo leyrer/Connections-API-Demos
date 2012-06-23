@@ -130,15 +130,11 @@ The IBM Connections password for the user.
 
 The servername (DNS hostname) of the IBM Connections installation the bookmark should be added to.
 
-=item B<-file>
-
-The file to be uploaded.
-
 =back
 
 =head1 DESCRIPTION
 
-B<file2Connections> will the bookmark to the public bookmark collection of a given IBM Connections 
+B<set_bookmark> will add the bookmark to the public bookmark collection of a given IBM Connections 
 installation.
 
 =head1 NOTABLE INFO
@@ -147,7 +143,7 @@ installation.
 
 =item B<URL generation>
 
-If you are using e.g. http://files.example.com/ instead of http://www.example.com/files as URLs,
+If you are using e.g. http://bookmarks.example.com/ instead of http://www.example.com/dogear as URLs,
 you have to ajust the URLs in the code.
 
 =item B<Error responses>
@@ -156,15 +152,9 @@ Note that IBM Connections is currently returning the HTTP status code 200 if the
 contradicting the documentation at 
 http://www.lotus.com/ldd/lcwiki.nsf/dx/Adding_a_file_using_a_multipart_POST_ic301
 
-=item B<nonce>
-
-You have to get a nonce for every upload before you can upload a file. See code for more details.
-http://www.lotus.com/ldd/lcwiki.nsf/dx/Getting_a_cryptographic_key_ic301
-
 =item B<Add vs. Update>
 
-You can not update a file entry by uploading it several time, like it is possible with bookmarks.
-If you add a file (POST), the label is not allowed exist before.
+If you try to add an existing bookmark, the existing entry will get upated and no new bookmark will get added.
 
 =item B<Server SSL certificates>
 
