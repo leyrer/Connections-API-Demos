@@ -30,16 +30,9 @@ pod2usage(1) if $opt_help;
 pod2usage(-verbose => 2) if $opt_man;
 
 # Connect to delicious
-pod2usage( -verbose => 2, -message => "$0: Please state the Delicious username!\n")
-	if ( $opt_delusr eq '' );
-pod2usage( -verbose => 2, -message => "$0: Please state the Delicious password!\n")
-	if ( $opt_delpwd eq '' );
 pod2usage( -verbose => 2, -message => "$0: Please state the Delicious tag to search for!\n")
 	if ( $opt_delicioustag eq '' );
-my $del = Net::Delicious->new({	user => $opt_delusr,
-								pswd => $opt_delpwd,
-								debug => 0,
-							  });
+my $del = &delicious_connect( $opt_delusr, $opt_delpwd );
 die "Connection problem with delicious\n"
 	if(not defined($del));
 
@@ -54,6 +47,8 @@ die "Connection problem with Connections\n"
 # Find my recent delicious links with tag "ibm"
 my $it = $del->recent_posts( {tag => $opt_delicioustag} );
 print "Found " . $it->count() . " links on delicious with the tag '$opt_delicioustag'.\n" if($DEBUG);
+
+# Iterate over the found delicious links and add them to Connections
 while (my $d = $it->next()) {
 	my $xml = createBookmarkAtomEntry($d, $ARGV[2]);
 	updateConnections($xml, $ua, $conn);
@@ -63,6 +58,7 @@ print "DONE!\n" if($DEBUG);
 
 exit;
 
+# Create UserAgent Object, set server certificate for SSL, set realm
 sub connections_connect {
 	my ($user, $pwd, $srv, $ua) = @_;
 	
@@ -90,10 +86,27 @@ sub connections_connect {
 	return($req);
 }
 
+# Connect to delicious, nothing fancy
+sub delicious_connect {
+	my ($usr, $pwd) = @_;
+
+	pod2usage( -verbose => 2, -message => "$0: Please state the Delicious username!\n")
+		if ( $usr eq '' );
+	pod2usage( -verbose => 2, -message => "$0: Please state the Delicious password!\n")
+		if ( $pwd eq '' );
+	
+	my $del = Net::Delicious->new({	user => $opt_delusr,
+									pswd => $opt_delpwd,
+									debug => 0,
+								  });
+	return $del;
+}
+
+# Create the ATOM document to create/update a bookmark entry in IBM Connections
 sub createBookmarkAtomEntry {
-	my($d, $user) = @_;
-	my $t = $d->extended();
-	my $title = ($d->description() eq '') ? $t : $d->description();
+	my($description, $user) = @_;
+	my $text = $description->extended();
+	my $title = ($description->description() eq '') ? $text : $description->description();
 
 	# Work around encoding issues with umlauts and delicious/Connections
 	# in title and description
@@ -102,10 +115,10 @@ sub createBookmarkAtomEntry {
 		$encoding_name = (uc($encoding_name) eq "EUC-JP") ? "UTF-8" : $encoding_name;
 		$title = encode($encoding_name, $title);
 	}
-	$encoding_name = Encode::Detect::Detector::detect($t);
+	$encoding_name = Encode::Detect::Detector::detect($text);
 	if(defined($encoding_name)) {
 		$encoding_name = (uc($encoding_name) eq "EUC-JP") ? "UTF-8" : $encoding_name;
-		$t = encode($encoding_name, $t);
+		$text = encode($encoding_name, $text);
 	}
 
 	print "Working on >>$title<<\n" if($DEBUG);
@@ -116,7 +129,8 @@ sub createBookmarkAtomEntry {
     		namespace => ["http://www.w3.org/2005/Atom"],
 			encoding  => 'utf-8');
 
-	my $tags = &genTags($d);
+	# The XML fragment for the Tags has to be created before we create the actual document XML
+	my $tags = &genTags($description);
 
 	my $content = sprintf(
 	    $gen->xml(
@@ -125,7 +139,7 @@ sub createBookmarkAtomEntry {
 	            $gen->title($title),
 	            $gen->content(
 	                { type => 'html' },
-					(($t ne '') ? $t : $title)
+					(($text ne '') ? $text : $title)
 	            ),
 	            $gen->category(
 	                {
@@ -133,7 +147,7 @@ sub createBookmarkAtomEntry {
 	                    term   => "bookmark"
 	                }
 	            ),
-	            $gen->link( { href => $d->href() } ),
+	            $gen->link( { href => $description->href() } ),
 				@{$tags},
 	        ),
 	    )
@@ -142,27 +156,27 @@ sub createBookmarkAtomEntry {
 	return($content);
 }
 
+# Parse the delicous tags and add them as Connections Tags
 sub genTags {
 	my ($d) = @_;
 	
 	# Create XMl Generator for Tags
-	my $taggen =
-  		XML::Generator->new( ':pretty',
-			);
+	my $taggen = XML::Generator->new( ':pretty', );
 	
 	# add tags from delicious to connections
 	my @tags;
-	push(@tags, $taggen->category( { term => 'deliciousimport' } ) );
+	push(@tags, $taggen->category( { term => 'deliciousimport' } ) );	# add another tag to identify imported tags
 	foreach my $dtags ($d->tags()) {
 		my @dtags = split(/\s/, $dtags);
 		foreach my $tag (@dtags) {
-			next if( $tag =~ /(from|twitter|ibm)/i);
+			next if( $tag =~ /(from|twitter|ibm)/i);	# skip a few unnecessary tags
 			push(@tags, $taggen->category( { term => $tag } ) );
 		}
 	}
 	return (\@tags);
 }
 
+#Send the ATOM document to the server
 sub updateConnections {
 	my ($xml, $ua, $req) = @_;
 
