@@ -1,21 +1,17 @@
 #!/usr/bin/perl
 
-# Uploads a file into a IBM Connections community
+# Uploads a file into the Files application of an BM Connections Community using multipart POST
+# Similar to http://www.lotus.com/ldd/lcwiki.nsf/dx/Adding_a_file_using_a_multipart_POST_ic301
 
 use strict;
 use warnings;
-use XML::Generator ':pretty';
-use LWP::UserAgent;
-use XML::RSS::Feed;
-use MIME::Lite;
-use HTTP::Request::Common;
-use File::stat;
 use Getopt::Long;
 use Pod::Usage;
-use JSON;
-use HTML::Parser;
+use LWP::UserAgent;
+use HTTP::Request::Common;
 use XML::XPath;
-use Data::Dumper;
+use JSON;
+
 
 ## Parse options and print usage if there is a syntax error,
 ## or if usage was explicitly requested.
@@ -30,146 +26,49 @@ pod2usage(-verbose => 2) if $opt_man;
 # Initiate connection to the Connections server
 my $connectionsUA = connect2Connection($opt_username, $opt_password, $opt_server);
 
+# Fetch the ID for the Communty with the given name
+my $communityID = retrieveCommunityID($connectionsUA, $opt_server, $opt_community);
 
-my $remoteApps = &retrieveRemoteApplicationsList($connectionsUA, $opt_server, $opt_community);
+# Generate the URL to the Community library we want to POST the file to
+# The URL can change, for example to https://files.example.com/basic/api...
+# TODO Make URL generation more robust
+my $filesurl = 'https://' . $opt_server . "/files/basic/api/communitylibrary/$communityID/feed";
 
-print "Remote App: " .  $remoteApps . "\n";
+# Create Data for Connections upload
+my $c = createUploadContent($opt_file);
 
-my $updatefeed = &retrieveCommunityFilesAtomFeed($connectionsUA, $opt_server, $remoteApps);
+# Create POST request via HTTP::Request::Common
+my $r = POST $filesurl, Content_Type => 'form-data', Content => $c;
 
-print "UpdateFeed: " . $updatefeed . "\n";
+# Send request and save response
+my $res = $connectionsUA->request($r);
 
-my $atom = &createAtomFileEntryDocument($opt_file);
-
-print "Content:\n" . $atom . "\n\n";
-
-&uploadFile($connectionsUA, $updatefeed, $atom);
+# Check the outcome of the response
+if ( $res->is_success ) {
+	my $resp = parseResponse($res->decoded_content);
+	if( $resp->{'status'} eq '' or $resp->{'status'} eq '200' ) {	
+		# yes, if there is no statuscode in  the metadata of the response html file, all went well
+	   	print "File '$opt_file' uploaded successfully to Community '$opt_community'.\n";
+		print "\tPublished: " . $resp->{'code'}->{'published'} . "\n";
+		print "\tID: " . $resp->{'code'}->{'id'} . "\n";
+	} else {	# and yes, they are sending http response 200 even if there was an error
+		print "Error " . $resp->{'status'} . " - '" . $resp->{'code'}->{'errorCode'} . "' while uploading.\n";
+		print "Detailed errormessage: " . $resp->{'code'}->{'errorMessage'} . "\n";
+		exit $resp->{'status'};
+	}
+} else {
+   	print "\tError while talking to the server: " . $res->status_line, "\n";
+	print $res->decoded_content;
+	print "\n";
+}
 
 exit;
 
-sub uploadFile {
-	my ($ua, $updatefeed, $atom) = @_;
-
-	# Create POST request
-	# my $req = HTTP::Request->new( POST => $updatefeed);	
-	my $req = POST $updatefeed, Content_Type => 'application/atom+xml', Content => $atom;
-
-	# Pass request to the user agent and get a response
-	my $res = $ua->request( GET $updatefeed, Content_Type => 'application/atom+xml', Content => $atom );
-
-	# Check the outcome of the response
-	if ( $res->is_success ) {
-	    print "File posted.\n";
-	}
-	else {
-	    print "Error!\n" . $res->status_line, "\n";
-	}
-	print "Response:\n";
-	print $res->content;
-	print "\n";
-	print Dumper($req);
-
-	print "\n";
-	print "\n";
-
-
-}
-
-
-sub createAtomFileEntryDocument {
-	my ($fn) = @_;
-
-	# Build XML document
-	my $gen =
-	  XML::Generator->new( ':pretty',
-	    namespace => ["http://www.w3.org/2005/atom", ] );
-
-	my $content = sprintf(
-	    $gen->xml(
-	        $gen->entry(
-	            $gen->title("Demo Dokument"),
-        	    $gen->category(
-            	    {
-	                    scheme => 'tag:ibm.com,2006:td/type',
-	                    term   => "document",
-						label  => 'document'
-	                }
-	            ),
-	        ),
-	    )
-	);
-
-	return $content;
-}
-
-# From the entry in the Communities remote application feed that contains the following category:
-# <category term="Files" scheme="http://www.ibm.com/xmlns/prod/sn/type" /> , find the value of the
-# href attribute in the <link> element that has the following rel attribute value:
-# rel="http://www.ibm.com/xmlns/prod/sn/remote-application/publish".
-# http://www-10.lotus.com/ldd/lcwiki.nsf/dx/Creating_community_files_ic301
-sub retrieveCommunityFilesAtomFeed {
-	my($ua, $srv, $rafeed) = @_;
-	my $filespublink = 'http://www.ibm.com/xmlns/prod/sn/remote-application/publish';
-
-	my $req = HTTP::Request->new( GET => $rafeed);
-	my $res = $ua->request($req);
-
-	# Check the outcome of the response
-	if( not $res->is_success ) {
-    	die "Error getting Community Files Atom Feed" . $res->status_line, "\n";
-	} 
-	
-	print "URL: $rafeed\n";
-	print "remote application feed:\n" . $res->content . "\n";
-	print "-"x80 . "\n\n";
-	# print $res->content;
-	my $xp = XML::XPath->new( xml => $res->content);
-	my @cfuploadurl= $xp->findnodes( "/feed/entry[category[\@term='Files']]/link[\@rel='$filespublink']" );
-	if ($#cfuploadurl == 0 and $cfuploadurl[0]->getAttribute('href') ne '') {
-		return $cfuploadurl[0]->getAttribute('href');
-	} else {
-		die "Could not retrieve the 'remote applications feed' from URL '$rafeed'.\n";
-	}
-}
-
-
-# To retrieve a list of remote applications associated with a community, use the remote applications
-# link in the community entry Atom document.
-# http://www.lotus.com/ldd/lcwiki.nsf/dx/Retrieving_a_remote_applications_list_ic301
-sub retrieveRemoteApplicationsList{
-	my($ua, $srv, $commname) = @_;
-	my $ralink = 'http://www.ibm.com/xmlns/prod/sn/remote-applications';
-
-	# The URL can change, for example to https://files.example.com/basic/api...
-	# TODO Make URL generation more robust
-	my $url = 'https://' . $srv . '/communities/service/atom/communities/all?title=' . $commname;
-	
-	my $req = HTTP::Request->new( GET => $url );
-	my $res = $ua->request($req);
-
-	# Check the outcome of the response
-	if( not $res->is_success ) {
-    	die "Error getting Communities service document: " . $res->status_line, "\n";
-	} 
-	
-	print "URL: $url \n";
-	print "list of remote applications:\n" . $res->content . "\n";
-	print "-"x80 . "\n\n";
-	
-	my $xp = XML::XPath->new( xml => $res->content);
-	my @applist= $xp->findnodes( "/feed/entry[title='$commname']/link[\@rel='$ralink']" );
-	if ($#applist == 0 and $applist[0]->getAttribute('href') ne '') {
-		return $applist[0]->getAttribute('href');
-	} else {
-		die "Could not retrieve the 'Remote Applikations' link for Community '$commname'.\n";
-	}
-}
 
 # Create UserAgent Object, get nounce, set server certificate for SSL, set realm
 sub connect2Connection {
 	my($usr, $pwd, $srv) = @_;
 	my $port = "443";
-
 
 	if ( $usr eq '' ) {
 		pod2usage( -verbose => 2, -message => "$0: Please state the IBM Connections username!\n");
@@ -200,6 +99,81 @@ sub connect2Connection {
 
 	return $ua;
 }
+
+# Create Data structure with the file to upload and corresponding metadata for multipart/form-data upload
+sub createUploadContent {
+	my ($file) = @_;
+
+	die "Given file '$file' not found!"
+		if(not -f $file);
+
+	$file =~ /([^\\\/]+)$/;
+	my $filename = $1;
+
+	my $content = {
+		_label		=> "XXX",
+		label		=> $filename,
+		description	=> 'Always add a nice description.',	# optional
+		file 		=> [ $file ],
+		tag			=> 'automated_update',					# Currently, only one tag can be set with perl
+# 		Adding multiple tags via a Array reference is not working, as all array references are apparently interpreted as file uploads
+# 		http://search.cpan.org/~gaas/HTTP-Message-6.03/lib/HTTP/Request/Common.pm
+# 		tag			=> ['perl_demo', 'automated_update'],	
+	};
+	return $content;
+}
+
+# Response from IBM Connections is a HTML page with embedded meta tags and json.
+# Parse this into a useful hash
+sub parseResponse {
+	my ($x) = @_;
+	my %response;
+
+	# No, at this time I do not want to get HTML::Parser in to properly parse the HTML.
+	# Give me a break!
+	$x =~ /\<meta name=\"(status)\" content=\"(\d+)\"/sm;
+	$response{'status'} = (not defined $2) ? '' : $2;
+	$x =~ s/^(.*?)\<body (.*?)\>//sm;
+	$x =~ s/\<\/body.*$//sm;
+	$x =~ s/\&quot\;/\"/gsm;	# why are the json quotes encoded ???
+	my $resp = decode_json $x;	# convert json to hash
+	$response{'code'} = $resp;
+	return(\%response);
+}
+
+# Retrieve the Community ID from the community entry Atom document.
+# Similar to http://www.lotus.com/ldd/lcwiki.nsf/dx/Retrieving_a_remote_applications_list_ic301
+sub retrieveCommunityID{
+	my($ua, $srv, $commname) = @_;
+	my $ralink = 'http://www.ibm.com/xmlns/prod/sn/remote-applications';
+
+	# The URL can change, for example to https://files.example.com/basic/api...
+	# TODO Make URL generation more robust
+	my $url = 'https://' . $srv . '/communities/service/atom/communities/all?search=' . $commname;
+
+	my $req = HTTP::Request->new( GET => $url );
+	my $res = $ua->request($req);
+
+	# Check the outcome of the response
+	if( not $res->is_success ) {
+		die "Error " . $res->{'status'} . " getting the Comunities service document. Error: '" . $res->{'code'}->{'errorCode'} . "\n";
+	} 
+	
+	# Search the ATOM feed for the ID tag inside the Community entry we are looking for.
+	# In case the Connections Search found several entries, we are now specifically looking 
+	# inside the XML stream for an entry with the given Community name
+	my $xp = XML::XPath->new( xml => $res->content);
+	my @applist= $xp->findnodes( "/feed/entry[title='$commname']/id" );
+
+	# Did we find exactly one Community with a valid ID?
+	if ($#applist == 0 and $applist[0]->string_value ne '') {
+		$applist[0]->string_value =~ /communityUuid=(.*?)$/,
+		return $1;
+	} else {
+		die "Could not retrieve the ID for Community '$commname'.\n";
+	}
+}
+
 
 # Get the nonce, which ensures the request is secure. 
 # http://www.lotus.com/ldd/lcwiki.nsf/dx/Getting_a_cryptographic_key_ic301
@@ -233,7 +207,7 @@ __END__
 
 =head1 NAME
 
-file2ConnCommunity - Upload a local file into a IBM Connections Community
+file2ConnCommunity - Upload a local file into the file store of an IBM Connections Community
 
 =head1 SYNOPSIS
 
@@ -279,6 +253,10 @@ The name of the IBM Connections Community to upload the file to
 B<file2ConnCommunity> will send the given file to the given Community inside the given IBM 
 Connections installation.
 
+=head1 EXAMPLE
+
+perl ./file2ConnCommunity.pl -user 'Demo User' -password '1234' -server connections.example.com -file ./demo.pdf  -community 'Demo-Community"
+
 =head1 NOTABLE INFO
 
 =over 8
@@ -304,7 +282,15 @@ http://www.lotus.com/ldd/lcwiki.nsf/dx/Getting_a_cryptographic_key_ic301
 You can not update a file entry by uploading it several time, like it is possible with bookmarks.
 If you add a file (POST), the label is not allowed exist before.
 
+=item B<Server SSL certificates>
+
+If the code can't connect to the server, it is probably due to the fact, that you are using self-signed certificates for SSL/TLS in your Connections installations. Just download the certificate to the directory the script is residing and name it "server.pem" (or adapt the code ;). SuperUser has a more detailed description on how to download the certificate: http://superuser.com/questions/97201/how-to-save-a-remote-server-ssl-certificate-locally-as-a-file
+
 =back
+
+=head1 Versions
+
+This code has been tested with Connection 3.0.1 and perl 5, version 12, subversion 4 (v5.12.4) built for i686-linux-gnu-thread-multi-64int.
 
 =head1 Licence
 
