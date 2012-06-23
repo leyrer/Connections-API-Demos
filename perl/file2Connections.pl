@@ -5,16 +5,11 @@
 
 use strict;
 use warnings;
-use XML::Generator ':pretty';
-use LWP::UserAgent;
-use XML::RSS::Feed;
-use MIME::Lite;
-use HTTP::Request::Common;
-use File::stat;
 use Getopt::Long;
 use Pod::Usage;
+use LWP::UserAgent;
+use HTTP::Request::Common;
 use JSON;
-use HTML::Parser ();
 
 
 ## Parse options and print usage if there is a syntax error,
